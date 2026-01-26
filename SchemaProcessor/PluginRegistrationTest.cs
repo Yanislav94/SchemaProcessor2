@@ -27,7 +27,7 @@ namespace MyCompany.Plugins
             try
             {
                 // -----------------------------
-                // Payload JSON
+                // Original Payload JSON
                 // -----------------------------
                 var payloadJson = @"{
                   ""name"": ""Thames River Topaz Fund - USD"",
@@ -42,7 +42,26 @@ namespace MyCompany.Plugins
                 tracing.Trace("Payload loaded");
 
                 // -----------------------------
-                // Retrieve ALL schema records (simple, single query, assume <5000)
+                // Second hardcoded JSON
+                // -----------------------------
+                var secondJson = @"{
+                  ""detail"": {
+                    ""name"": ""Thames River Topaz Fund - USD""
+                  },
+                  ""header"": {
+                    ""type"": ""fund/Fund"",
+                    ""id"": ""104""
+                  },
+                  ""uri"": ""/fund/Fund/104"",
+                  ""versioning"": {
+                    ""createdAt"": 1534259293
+                  }
+                }";
+
+                var secondPayload = JObject.Parse(secondJson);
+
+                // -----------------------------
+                // Retrieve ALL schema records
                 // -----------------------------
                 var query = new QueryExpression("entres_entityresolutionschematable")
                 {
@@ -81,11 +100,17 @@ namespace MyCompany.Plugins
                         {
                             tracing.Trace($"MATCH FOUND: {fieldName} = {prop.Value}");
 
+                            // Add new properties from second JSON
                             results.Add(new
                             {
                                 withCoreSchemaName = fieldName,
                                 value = prop.Value.Type == JTokenType.Null ? null : prop.Value.ToObject<object>(),
+                                withCoreEntity = secondPayload["header"]?["type"]?.ToString(),
+                                entityUri = secondPayload["uri"]?.ToString(),
+                                entityCreatedAt = secondPayload["versioning"]?["createdAt"]?.Value<long>() ?? 0,
+                                relatedEntityId = "" // empty for now
                             });
+
                             break;
                         }
                     }
