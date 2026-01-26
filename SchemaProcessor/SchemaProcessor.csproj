@@ -107,5 +107,8 @@
     <None Include="DataCapture.Plugins.snk" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="dll\SchemaProcessor.dll" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
