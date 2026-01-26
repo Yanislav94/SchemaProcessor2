@@ -44,7 +44,7 @@ namespace MyCompany.Plugins
                 // -----------------------------
                 // Retrieve ALL schema records (simple, single query, assume <5000)
                 // -----------------------------
-                var query = new QueryExpression("entres_entityresolutionschematables")
+                var query = new QueryExpression("entres_entityresolutionschematable")
                 {
                     ColumnSet = new ColumnSet(
                         "entres_field",
