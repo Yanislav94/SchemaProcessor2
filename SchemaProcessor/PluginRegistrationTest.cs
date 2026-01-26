@@ -26,39 +26,32 @@ namespace MyCompany.Plugins
 
             try
             {
-                // -----------------------------
-                // Original Payload JSON
-                // -----------------------------
-                var payloadJson = @"{
-                  ""name"": ""Thames River Topaz Fund - USD"",
-                  ""assetClass"": ""/classification/AssetClass/1"",
-                  ""strategy"": ""/classification/PrimaryStrategy/77"",
-                  ""vintageYear"": null,
-                  ""managerName"": null,
-                  ""type"": ""Open End""
-                }";
+                // Original payload
+                var payloadJson = context.InputParameters.Contains("PayloadJson")
+                    ? context.InputParameters["PayloadJson"] as string
+                    : null;
+
+                if (string.IsNullOrWhiteSpace(payloadJson))
+                {
+                    throw new InvalidPluginExecutionException("PayloadJson input parameter is missing.");
+                }
 
                 var payload = JObject.Parse(payloadJson);
                 tracing.Trace("Payload loaded");
 
-                // -----------------------------
-                // Second hardcoded JSON
-                // -----------------------------
-                var secondJson = @"{
-                  ""detail"": {
-                    ""name"": ""Thames River Topaz Fund - USD""
-                  },
-                  ""header"": {
-                    ""type"": ""fund/Fund"",
-                    ""id"": ""104""
-                  },
-                  ""uri"": ""/fund/Fund/104"",
-                  ""versioning"": {
-                    ""createdAt"": 1534259293
-                  }
-                }";
+                // Second JSON
+                var secondJson = context.InputParameters.Contains("SchemaJson")
+                    ? context.InputParameters["SchemaJson"] as string
+                    : null;
+
+                if (string.IsNullOrWhiteSpace(secondJson))
+                {
+                    throw new InvalidPluginExecutionException("SecondJson input parameter is missing.");
+                }
 
                 var secondPayload = JObject.Parse(secondJson);
+                tracing.Trace("Second JSON loaded");
+
 
                 // -----------------------------
                 // Retrieve ALL schema records
