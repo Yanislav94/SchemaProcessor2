@@ -84,10 +84,8 @@ namespace MyCompany.Plugins
                             results.Add(new
                             {
                                 withCoreSchemaName = fieldName,
-                                value = prop.Value.Type == JTokenType.Null ? null : prop.Value.ToObject<object>()
+                                value = prop.Value.Type == JTokenType.Null ? null : prop.Value.ToObject<object>(),
                             });
-
-                            // Once matched, stop inner loop
                             break;
                         }
                     }
