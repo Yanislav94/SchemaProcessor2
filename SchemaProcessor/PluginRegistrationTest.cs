@@ -52,6 +52,12 @@ namespace MyCompany.Plugins
                 var secondPayload = JObject.Parse(secondJson);
                 tracing.Trace("Second JSON loaded");
 
+                // RelatedEntityId payload
+                var relatedEntityId = context.InputParameters.Contains("RelatedEntityId")
+                    ? context.InputParameters["RelatedEntityId"] as string
+                    : "";
+
+                tracing.Trace($"RelatedEntityId: {relatedEntityId}");
 
                 // -----------------------------
                 // Retrieve ALL schema records
@@ -101,7 +107,7 @@ namespace MyCompany.Plugins
                                 withCoreEntity = secondPayload["header"]?["type"]?.ToString(),
                                 entityUri = secondPayload["uri"]?.ToString(),
                                 entityCreatedAt = secondPayload["versioning"]?["createdAt"]?.Value<long>() ?? 0,
-                                relatedEntityId = "" // empty for now
+                                relatedEntityId = relatedEntityId
                             });
 
                             break;
