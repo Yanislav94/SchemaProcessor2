@@ -11,53 +11,50 @@ namespace MyCompany.Plugins
     {
         public void Execute(IServiceProvider serviceProvider)
         {
-            var context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
-            var tracing = (ITracingService)serviceProvider.GetService(typeof(ITracingService));
-            var serviceFactory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
+            var context =
+                (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
+
+            var tracing =
+                (ITracingService)serviceProvider.GetService(typeof(ITracingService));
+
+            var serviceFactory =
+                (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
+
             var service = serviceFactory.CreateOrganizationService(context.UserId);
 
             tracing.Trace("=== PluginRegistrationTest START ===");
 
             try
             {
-                // -----------------------------
-                // 1. Parse PayloadJson as an ARRAY
-                // -----------------------------
+                // Original payload
                 var payloadJson = context.InputParameters.Contains("PayloadJson")
                     ? context.InputParameters["PayloadJson"] as string
                     : null;
 
                 if (string.IsNullOrWhiteSpace(payloadJson))
-                    throw new InvalidPluginExecutionException("PayloadJson input parameter is missing.");
-
-                var payloadArray = JArray.Parse(payloadJson);
-                tracing.Trace($"Payload array loaded with {payloadArray.Count} items");
-
-                // Flatten all properties into a single list
-                var allProperties = new List<JProperty>();
-                foreach (var item in payloadArray)
                 {
-                    if (item is JObject obj)
-                        allProperties.AddRange(obj.Properties());
+                    throw new InvalidPluginExecutionException("PayloadJson input parameter is missing.");
                 }
-                tracing.Trace($"Total properties to process: {allProperties.Count}");
-                tracing.Trace($"Flattened properties: {JsonConvert.SerializeObject(allProperties)}");
 
-                // -----------------------------
-                // 2. Parse second JSON (SchemaJson)
-                // -----------------------------
+                var payload = JObject.Parse(payloadJson);
+                tracing.Trace("Payload loaded");
+
+                // Second JSON
                 var secondJson = context.InputParameters.Contains("SchemaJson")
                     ? context.InputParameters["SchemaJson"] as string
                     : null;
 
                 if (string.IsNullOrWhiteSpace(secondJson))
-                    throw new InvalidPluginExecutionException("SchemaJson input parameter is missing.");
+                {
+                    throw new InvalidPluginExecutionException("SecondJson input parameter is missing.");
+                }
 
                 var secondPayload = JObject.Parse(secondJson);
                 tracing.Trace("Second JSON loaded");
 
+
                 // -----------------------------
-                // 3. Retrieve ALL schema records
+                // Retrieve ALL schema records
                 // -----------------------------
                 var query = new QueryExpression("entres_entityresolutionschematable")
                 {
@@ -73,7 +70,7 @@ namespace MyCompany.Plugins
                 tracing.Trace($"Total schema records retrieved: {schemaCollection.Entities.Count}");
 
                 // -----------------------------
-                // 4. Nested foreach: iterate schema + flattened payload properties
+                // Nested foreach: iterate all schema records
                 // -----------------------------
                 var results = new List<object>();
 
@@ -90,12 +87,13 @@ namespace MyCompany.Plugins
                         continue;
                     }
 
-                    foreach (var prop in allProperties)
+                    foreach (var prop in payload.Properties())
                     {
                         if (string.Equals(prop.Name, fieldName, StringComparison.OrdinalIgnoreCase))
                         {
                             tracing.Trace($"MATCH FOUND: {fieldName} = {prop.Value}");
 
+                            // Add new properties from second JSON
                             results.Add(new
                             {
                                 withCoreSchemaName = fieldName,
@@ -103,7 +101,7 @@ namespace MyCompany.Plugins
                                 withCoreEntity = secondPayload["header"]?["type"]?.ToString(),
                                 entityUri = secondPayload["uri"]?.ToString(),
                                 entityCreatedAt = secondPayload["versioning"]?["createdAt"]?.Value<long>() ?? 0,
-                                relatedEntityId = ""
+                                relatedEntityId = "" // empty for now
                             });
 
                             break;
@@ -112,7 +110,7 @@ namespace MyCompany.Plugins
                 }
 
                 // -----------------------------
-                // 5. Output
+                // Output
                 // -----------------------------
                 var resultJson = JsonConvert.SerializeObject(results);
                 tracing.Trace($"Result JSON: {resultJson}");
