@@ -11,22 +11,15 @@ namespace MyCompany.Plugins
     {
         public void Execute(IServiceProvider serviceProvider)
         {
-            var context =
-                (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
-
-            var tracing =
-                (ITracingService)serviceProvider.GetService(typeof(ITracingService));
-
-            var serviceFactory =
-                (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
-
+            var context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
+            var tracing = (ITracingService)serviceProvider.GetService(typeof(ITracingService));
+            var serviceFactory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
             var service = serviceFactory.CreateOrganizationService(context.UserId);
 
             tracing.Trace("=== PluginRegistrationTest START ===");
 
             try
             {
-                // Original payload
                 var payloadJson = context.InputParameters.Contains("PayloadJson")
                     ? context.InputParameters["PayloadJson"] as string
                     : null;
@@ -39,7 +32,6 @@ namespace MyCompany.Plugins
                 var payload = JObject.Parse(payloadJson);
                 tracing.Trace("Payload loaded");
 
-                // Second JSON
                 var secondJson = context.InputParameters.Contains("SchemaJson")
                     ? context.InputParameters["SchemaJson"] as string
                     : null;
@@ -52,7 +44,6 @@ namespace MyCompany.Plugins
                 var secondPayload = JObject.Parse(secondJson);
                 tracing.Trace("Second JSON loaded");
 
-                // RelatedEntityId payload
                 var relatedEntityId = context.InputParameters.Contains("RelatedEntityId")
                     ? context.InputParameters["RelatedEntityId"] as string
                     : "";
@@ -99,7 +90,6 @@ namespace MyCompany.Plugins
                         {
                             tracing.Trace($"MATCH FOUND: {fieldName} = {prop.Value}");
 
-                            // Add new properties from second JSON
                             results.Add(new
                             {
                                 withCoreSchemaName = fieldName,
