@@ -20,6 +20,9 @@ namespace MyCompany.Plugins
 
             try
             {
+                // -----------------------------
+                // Input: Payload JSON
+                // -----------------------------
                 var payloadJson = context.InputParameters.Contains("PayloadJson")
                     ? context.InputParameters["PayloadJson"] as string
                     : null;
@@ -32,23 +35,41 @@ namespace MyCompany.Plugins
                 var payload = JObject.Parse(payloadJson);
                 tracing.Trace("Payload loaded");
 
-                var secondJson = context.InputParameters.Contains("SchemaJson")
+                // -----------------------------
+                // Input: Schema JSON
+                // -----------------------------
+                var schemaJson = context.InputParameters.Contains("SchemaJson")
                     ? context.InputParameters["SchemaJson"] as string
                     : null;
 
-                if (string.IsNullOrWhiteSpace(secondJson))
+                if (string.IsNullOrWhiteSpace(schemaJson))
                 {
-                    throw new InvalidPluginExecutionException("SecondJson input parameter is missing.");
+                    throw new InvalidPluginExecutionException("SchemaJson input parameter is missing.");
                 }
 
-                var secondPayload = JObject.Parse(secondJson);
-                tracing.Trace("Second JSON loaded");
+                var schemaPayload = JObject.Parse(schemaJson);
+                tracing.Trace("Schema JSON loaded");
 
+                // -----------------------------
+                // Input: RelatedEntityId
+                // -----------------------------
                 var relatedEntityId = context.InputParameters.Contains("RelatedEntityId")
                     ? context.InputParameters["RelatedEntityId"] as string
                     : "";
 
                 tracing.Trace($"RelatedEntityId: {relatedEntityId}");
+
+                // -----------------------------
+                // Build payload lookup (KEY OPTIMIZATION)
+                // -----------------------------
+                var payloadLookup = new Dictionary<string, JToken>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var prop in payload.Properties())
+                {
+                    payloadLookup[prop.Name] = prop.Value;
+                }
+
+                tracing.Trace($"Payload properties indexed: {payloadLookup.Count}");
 
                 // -----------------------------
                 // Retrieve ALL schema records
@@ -67,42 +88,36 @@ namespace MyCompany.Plugins
                 tracing.Trace($"Total schema records retrieved: {schemaCollection.Entities.Count}");
 
                 // -----------------------------
-                // Nested foreach: iterate all schema records
+                // Single loop over schema
                 // -----------------------------
                 var results = new List<object>();
 
                 foreach (var entity in schemaCollection.Entities)
                 {
                     var fieldName = entity.GetAttributeValue<string>("entres_field");
-                    var withCoreSchemaName = entity.GetAttributeValue<string>("entres_withcoreentity");
-
-                    tracing.Trace($"Checking schema field: {fieldName}");
 
                     if (string.IsNullOrWhiteSpace(fieldName))
                     {
-                        tracing.Trace("Skipping empty field");
                         continue;
                     }
 
-                    foreach (var prop in payload.Properties())
+                    // O(1) lookup instead of inner loop
+                    if (!payloadLookup.TryGetValue(fieldName, out var token))
                     {
-                        if (string.Equals(prop.Name, fieldName, StringComparison.OrdinalIgnoreCase))
-                        {
-                            tracing.Trace($"MATCH FOUND: {fieldName} = {prop.Value}");
-
-                            results.Add(new
-                            {
-                                withCoreSchemaName = fieldName,
-                                value = prop.Value.Type == JTokenType.Null ? null : prop.Value.ToObject<object>(),
-                                withCoreEntity = secondPayload["header"]?["type"]?.ToString(),
-                                entityUri = secondPayload["uri"]?.ToString(),
-                                entityCreatedAt = secondPayload["versioning"]?["createdAt"]?.Value<long>() ?? 0,
-                                relatedEntityId = relatedEntityId
-                            });
-
-                            break;
-                        }
+                        continue;
                     }
+
+                    tracing.Trace($"MATCH FOUND: {fieldName} = {token}");
+
+                    results.Add(new
+                    {
+                        withCoreSchemaName = fieldName,
+                        value = token.Type == JTokenType.Null ? null : token.ToObject<object>(),
+                        withCoreEntity = schemaPayload["header"]?["type"]?.ToString(),
+                        entityUri = schemaPayload["uri"]?.ToString(),
+                        entityCreatedAt = schemaPayload["versioning"]?["createdAt"]?.Value<long>() ?? 0,
+                        relatedEntityId = relatedEntityId
+                    });
                 }
 
                 // -----------------------------
